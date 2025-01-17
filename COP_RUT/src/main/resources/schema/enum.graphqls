@@ -1,0 +1,40 @@
+enum CleaningType {
+    STANDARD
+    GENERAL
+    POST_RENOVATION
+}
+
+enum ExecutionStatus {
+    COMPLETED
+    PROCESSING
+    ACCEPTED
+}
+
+enum DistanceFromCenter {
+    NEAR
+    MEDIUM
+    FAR
+}
+
+enum AdditionalService {
+    WINDOW_CLEANING
+    CARPET_CLEANING
+    FURNITURE_CLEANING
+}
+
+enum RedFlag {
+    AGGRESSIVE_CLIENT
+    DAMAGED_EQUIPMENT
+    LAW_ENFORCEMENT_REQUIRED
+}
+
+enum SpaceType{
+    FLAT
+    OFFICE
+    DINING
+    WAREHOUSE
+    FACTORY_FLOOR
+    LABORATORY
+    GARAGE
+    WORKSHOP
+}

@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package cop_grpc;
+
+service BrigadeService {
+  rpc AddBrigade(AddBrigadeRequest) returns (AddBrigadeResponse);
+  rpc DeleteBrigade(DeleteBrigadeRequest) returns (BrigadeResponse);
+  rpc UpdateBrigade(UpdateBrigadeRequest) returns (BrigadeResponse);
+  rpc FreeBrigade(FreeBrigadeRequest) returns (FreeBrigadeResponse);
+  rpc AssignBrigadeToOrder(AssignBrigadeRequest) returns (AssignBrigadeResponse);
+  rpc GetAllBrigades(Empty) returns (BrigadeListResponse);
+}
+
+message AddBrigadeRequest {
+  string phoneNumber = 1;
+  repeated string workersId = 2;
+}
+
+message AddBrigadeResponse {
+  string uuid = 1;
+}
+
+message DeleteBrigadeRequest {
+  string brigadeUuid = 1;
+}
+
+message UpdateBrigadeRequest {
+  string uuid = 1;
+  string phoneNumber = 2;
+  repeated string workersId = 3;
+}
+
+message FreeBrigadeRequest {
+  string brigadeUuid = 1;
+}
+
+message FreeBrigadeResponse {
+  string message = 1;
+}
+
+message AssignBrigadeRequest {
+  string orderId = 1;
+}
+
+message AssignBrigadeResponse {
+  string uuid = 1;
+}
+
+message BrigadeResponse {
+  string uuid = 1;
+  string phoneNumber = 2;
+  repeated string workersId = 3;
+  bool freeness = 4;
+  string order = 5;
+}
+
+message BrigadeListResponse {
+  repeated BrigadeResponse brigades = 1;
+}
+
+message Empty {}

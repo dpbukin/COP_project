@@ -1,0 +1,94 @@
+
+type Query {
+
+#   Clients
+    clients: [ClientDto]
+    clientById(uuid: String!): ClientDto
+    clientsByPhoneNumber(phone: String!): ClientDto
+
+#   Brigades
+    getFreeBrigades: [BrigadeDto]
+    getAllBrigades: [BrigadeDto]
+    getBrigadeById(uuid:String!) : BrigadeDto
+
+#   Orders
+    getOrderById(uuid: String!): OrderDto
+    getAllOrders: [OrderDto]
+    getOrdersByClientId(uuid: String!): [OrderDto]
+    getOrdersByExecutionDate(executionDate: String!): [OrderDto]
+
+    #    Worker
+    getWorkerById(uuid: String): WorkerDto
+    getAllWorkers: [WorkerDto]
+    getWorkersByBrigade(brigadeUuid: String): [WorkerDto]
+    getWorkersOnShift: [WorkerDto]
+}
+
+type Mutation {
+
+#   Clients
+    createClient(name: String, email: String, phone: String, orders: [String]): ClientDto
+    updateClient(uuid: String!, name: String, phone: String, email: String, orders: [String]): ClientDto
+
+    deleteClientById(uuid: String!): Boolean
+#   Brigades
+    updateBrigade(uuid:String, phone: String, workers: [String], freeness: Boolean, order : String ) : BrigadeDto
+    createBrigade(phone: String, workers: [String], freeness: Boolean, order : String): BrigadeDto
+
+#   Orders
+#    deleteOrder(uuid: String!): Boolean
+    createOrder(
+        cleaningType: CleaningType,
+        executionStatus: ExecutionStatus,
+        execution: String,
+        createDate: String,
+        orderNumber: String,
+        distanceFromCenter: DistanceFromCenter,
+        additionalServices: [AdditionalService]!,
+        customerComment: String,
+        executorComment: String,
+        redFlag: RedFlag,
+        cost: Float,
+        archived: Boolean,
+        spaces: [SpaceInput],
+        client: String,
+        brigade: String
+    ): OrderDto
+
+    updateOrder(
+        uuid: String,
+        cleaningType: CleaningType,
+        executionStatus: ExecutionStatus,
+        execution: String,
+        createDate: String,
+        orderNumber: String,
+        distanceFromCenter: DistanceFromCenter,
+        additionalServices: [AdditionalService],
+        customerComment: String,
+        executorComment: String,
+        redFlag: RedFlag,
+        cost: Float,
+        archived: Boolean,
+        spaces: [SpaceInput],
+        client: String,
+        brigade: String
+    ): OrderDto
+
+    createWorker(
+        name: String,
+        phoneNumber: String,
+        isOnShift: Boolean,
+        brigade: String,
+        dismissed: Boolean
+    ): WorkerDto
+
+    updateWorker(
+        uuid: String,
+        name: String,
+        phoneNumber: String,
+        isOnShift: Boolean,
+        brigade: String,
+        dismissed: Boolean
+    ): WorkerDto
+
+}

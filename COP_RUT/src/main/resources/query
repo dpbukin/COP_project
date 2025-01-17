@@ -1,0 +1,415 @@
+query {
+  clients {
+    uuid
+    name
+    email
+    phoneNumber
+    orders
+    isDelete
+  }
+}
+
+query {
+  clientById(uuid: "client-uuid") {
+    uuid
+    name
+    email
+    phoneNumber
+    orders
+    isDelete
+  }
+}
+
+query {
+  clientsByPhoneNumber(phone: "123456789") {
+    uuid
+    name
+    email
+    phoneNumber
+    orders
+    isDelete
+  }
+}
+
+query {
+  getFreeBrigades {
+    uuid
+    phoneNumber
+    freeness
+    orders
+    workers {
+      uuid
+      name
+    }
+  }
+}
+
+query {
+  getAllBrigades {
+    uuid
+    phoneNumber
+    freeness
+    orders
+    workers {
+      uuid
+      name
+    }
+  }
+}
+
+query {
+  getBrigadeById(uuid: "brigade-uuid") {
+    uuid
+    phoneNumber
+    freeness
+    orders
+    workers {
+      uuid
+      name
+    }
+  }
+}
+
+query {
+  getOrderById(uuid: "order-uuid") {
+    uuid
+    cleaningType
+    executionStatus
+    execution
+    createDate
+    orderNumber
+    distanceFromCenter
+    additionalServices
+    customerComment
+    executorComment
+    redFlag
+    cost
+    archived
+    rooms {
+      residentialRoomType
+      industrialRoomType
+      area
+    }
+    client
+    brigade
+  }
+}
+
+query {
+  getAllOrders {
+    uuid
+    cleaningType
+    executionStatus
+    execution
+    createDate
+    orderNumber
+    distanceFromCenter
+    additionalServices
+    customerComment
+    executorComment
+    redFlag
+    cost
+    archived
+    rooms {
+      residentialRoomType
+      industrialRoomType
+      area
+    }
+    client
+    brigade
+  }
+}
+
+query {
+  getOrdersByClientId(uuid: "client-uuid") {
+    uuid
+    cleaningType
+    executionStatus
+    execution
+    createDate
+    orderNumber
+    distanceFromCenter
+    additionalServices
+    customerComment
+    executorComment
+    redFlag
+    cost
+    archived
+    rooms {
+      residentialRoomType
+      industrialRoomType
+      area
+    }
+    client
+    brigade
+  }
+}
+
+query {
+  getOrdersByExecutionDate(executionDate: "2024-10-16") {
+    uuid
+    cleaningType
+    executionStatus
+    execution
+    createDate
+    orderNumber
+    distanceFromCenter
+    additionalServices
+    customerComment
+    executorComment
+    redFlag
+    cost
+    archived
+    rooms {
+      residentialRoomType
+      industrialRoomType
+      area
+    }
+    client
+    brigade
+  }
+}
+
+query {
+  getWorkerById(uuid: "worker-uuid") {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+query {
+  getAllWorkers {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+query {
+  getWorkersByBrigade(brigadeUuid: "brigade-uuid") {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+query {
+  getWorkersOnShift {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+
+mutation {
+  createClient(
+    name: "John Doe",
+    email: "johndoe@example.com",
+    phone: "123456789",
+    orders: ["order-uuid"]
+  ) {
+    uuid
+    name
+    email
+    phoneNumber
+    orders
+    isDelete
+  }
+}
+
+mutation {
+  updateClient(
+    uuid: "client-uuid",
+    name: "John Doe Updated",
+    phone: "987654321",
+    email: "john.doe@example.com",
+    orders: ["order-uuid"]
+  ) {
+    uuid
+    name
+    email
+    phoneNumber
+    orders
+    isDelete
+  }
+}
+
+mutation {
+  createBrigade(
+    phone: "987654321",
+    workers: "worker-uuid",
+    freeness: true,
+    order: "order-uuid"
+  ) {
+    uuid
+    phoneNumber
+    freeness
+    orders
+    workers {
+      uuid
+      name
+    }
+  }
+}
+
+mutation {
+  updateBrigade(
+    uuid: "brigade-uuid",
+    phone: "987654321",
+    workers: ["worker-uuid"],
+    freeness: true,
+    order: "order-uuid"
+  ) {
+    uuid
+    phoneNumber
+    freeness
+    orders
+    workers {
+      uuid
+      name
+    }
+  }
+}
+
+mutation {
+    createOrder(
+        cleaningType: CleaningType!,
+        executionStatus: ExecutionStatus!,
+        execution: String!,
+        createDate: String!,
+        orderNumber: String!,
+        distanceFromCenter: DistanceFromCenter!,
+        additionalServices: [AdditionalService!]!,
+        customerComment: String,
+        executorComment: String,
+        redFlag: RedFlag!,
+        cost: Float!,
+        archived: Boolean!,
+        rooms: [RoomInput]!,
+        client: String!,
+        brigade: String!
+    ) {
+        uuid
+        cleaningType
+        executionStatus
+        execution
+        createDate
+        orderNumber
+        distanceFromCenter
+        additionalServices
+        customerComment
+        executorComment
+        redFlag
+        cost
+        archived
+        rooms {
+            residentialRoomType
+            industrialRoomType
+            area
+        }
+        client
+        brigade
+    }
+}
+
+mutation {
+    updateOrder(
+        uuid: String!,
+        cleaningType: CleaningType!,
+        executionStatus: ExecutionStatus!,
+        execution: String!,
+        createDate: String!,
+        orderNumber: String!,
+        distanceFromCenter: DistanceFromCenter!,
+        additionalServices: [AdditionalService!]!,
+        customerComment: String,
+        executorComment: String,
+        redFlag: RedFlag!,
+        cost: Float!,
+        archived: Boolean!,
+        rooms: [RoomInput]!,
+        client: String!,
+        brigade: String!
+    ) {
+        uuid
+        cleaningType
+        executionStatus
+        execution
+        createDate
+        orderNumber
+        distanceFromCenter
+        additionalServices
+        customerComment
+        executorComment
+        redFlag
+        cost
+        archived
+        rooms {
+            residentialRoomType
+            industrialRoomType
+            area
+        }
+        client
+        brigade
+    }
+}
+
+mutation {
+  createWorker(
+    name: "Worker Name",
+    phoneNumber: "123456789",
+    isOnShift: true,
+    brigade: "brigade-uuid",
+    dismissed: false
+  ) {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+
+mutation {
+  updateWorker(
+    uuid: "worker-uuid",
+    name: "Updated Worker",
+    phoneNumber: "987654321",
+    isOnShift: false,
+    brigade: "brigade-uuid",
+    dismissed: true
+  ) {
+    uuid
+    name
+    phoneNumber
+    isOnShift
+    brigade
+    dismissed
+  }
+}
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Notifications</title>
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-pzjw8f+ua7Kw1TIq0+m7Ii2U6bmeImuGb7MjkKzj8t4PzMI8heHVg/mR2skIu4u3" crossorigin="anonymous">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 18px;
+            background: linear-gradient(135deg, #9f9ea8, #bdb5b5); /* Градиентный фон */
+            color: #343a40;
+        }
+
+        h1 {
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #notifications {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            z-index: 1000;
+        }
+
+        .notification {
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #d1ecf1;
+            color: #0c5460;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .table-container {
+            margin-top: 40px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            background-color: #ffffff;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            text-align: center;
+            padding: 12px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        table thead {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        .notification-table {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-table td {
+            font-style: italic;
+        }
+
+        .btn-clear {
+            margin-top: 15px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        .btn-clear:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Клининг</h1>
+
+    <div id="notifications"></div>
+
+    <div class="table-container">
+        <div class="notification-table">
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Сообщение</th>
+                </tr>
+                </thead>
+                <tbody id="notification-table-body">
+                </tbody>
+            </table>
+        </div>
+        <button class="btn-clear" id="clearButton">Очистить таблицу</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    const socket = new SockJS('http://localhost:8000/ws');
+    const stompClient = Stomp.over(socket);
+    const maxNotifications = 200;
+    let notificationHistory = [];
+
+    stompClient.connect({}, function(frame) {
+        console.log('Connected: ' + frame);
+
+        stompClient.subscribe('/topic/notifications', function(notification) {
+            console.log("Received notification: ", notification.body);
+
+            const notificationsDiv = document.getElementById('notifications');
+            const notificationElement = document.createElement('div');
+            notificationElement.classList.add('notification', 'alert', 'alert-info');
+            notificationElement.textContent = notification.body;
+            notificationsDiv.appendChild(notificationElement);
+
+            setTimeout(() => {
+                notificationsDiv.removeChild(notificationElement);
+            }, 10000);
+
+            if (notificationHistory.length >= maxNotifications) {
+                notificationHistory.shift();
+            }
+
+            notificationHistory.push(notification.body);
+            updateNotificationTable();
+        });
+    });
+
+    function updateNotificationTable() {
+        const tableBody = document.getElementById('notification-table-body');
+        tableBody.innerHTML = '';
+
+        notificationHistory.forEach(notification => {
+            const row = tableBody.insertRow();
+            const cell1 = row.insertCell(0);
+
+            cell1.textContent = notification;
+        });
+    }
+
+    document.getElementById('clearButton').addEventListener('click', () => {
+        notificationHistory = [];
+        updateNotificationTable();
+    });
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>WebSocket Notifications</title>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            margin: 18px;-->
+<!--        }-->
+<!--        #notifications {-->
+<!--            position: fixed;-->
+<!--            top: 10px;-->
+<!--            right: 10px;-->
+<!--            width: 300px;-->
+<!--        }-->
+<!--        .notification {-->
+<!--            border: 1px solid #333;-->
+<!--            border-radius: 8px;-->
+<!--            padding: 10px;-->
+<!--            margin-bottom: 10px;-->
+<!--            background-color: #f1f1f1;-->
+<!--            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);-->
+<!--        }-->
+<!--        table {-->
+<!--            margin-top: 20px;-->
+<!--            width: 100%;-->
+<!--            border-collapse: collapse;-->
+<!--        }-->
+<!--        table, th, td {-->
+<!--            border: 1px solid #ddd;-->
+<!--        }-->
+<!--        th, td {-->
+<!--            padding: 8px 12px;-->
+<!--            text-align: left;-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--<h1>Уведомления о заказах</h1>-->
+<!--<div id="notifications"></div>-->
+
+<!--&lt;!&ndash; Таблица для отображения уведомлений &ndash;&gt;-->
+<!--<table id="notification-table">-->
+<!--    <thead>-->
+<!--    <tr>-->
+<!--        <th>Сообщение</th>-->
+<!--    </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--    &lt;!&ndash; Данные будут добавляться сюда &ndash;&gt;-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<!--<script>-->
+<!--    const socket = new SockJS('http://localhost:8000/ws');  // Подключение к WebSocket-->
+<!--    const stompClient = Stomp.over(socket);-->
+<!--    const maxNotifications = 200;  // Максимальное количество уведомлений-->
+<!--    let notificationHistory = [];  // Массив для хранения уведомлений-->
+
+<!--    // Подключение к серверу-->
+<!--    stompClient.connect({}, function(frame) {-->
+<!--        console.log('Connected: ' + frame);-->
+
+<!--        // Подписка на канал уведомлений-->
+<!--        stompClient.subscribe('/topic/notifications', function(notification) {-->
+<!--            console.log("Received notification: ", notification.body);  // Логируем содержимое уведомления-->
+
+<!--            // Логика для боковых уведомлений-->
+<!--            const notificationsDiv = document.getElementById('notifications');-->
+<!--            const notificationElement = document.createElement('div');-->
+<!--            notificationElement.classList.add('notification');-->
+<!--            notificationElement.textContent = notification.body;-->
+<!--            notificationsDiv.appendChild(notificationElement);-->
+
+<!--            // Удаление бокового уведомления через 10 секунд-->
+<!--            setTimeout(() => {-->
+<!--                notificationsDiv.removeChild(notificationElement);-->
+<!--            }, 10000);-->
+
+<!--            // Логика для добавления уведомлений в таблицу-->
+<!--            if (notificationHistory.length >= maxNotifications) {-->
+<!--                notificationHistory.shift();  // Удаляем старое уведомление, если лимит превышен-->
+<!--            }-->
+
+<!--            // Добавление уведомления в таблицу-->
+<!--            notificationHistory.push(notification.body);  // Сохраняем только текст уведомления-->
+<!--            updateNotificationTable();-->
+<!--        });-->
+<!--    });-->
+
+<!--    // Функция обновления таблицы-->
+<!--    function updateNotificationTable() {-->
+<!--        console.log("Updating table with notification data...");-->
+
+<!--        const tableBody = document.getElementById('notification-table').getElementsByTagName('tbody')[0];-->
+<!--        tableBody.innerHTML = '';  // Очистить таблицу перед добавлением новых данных-->
+
+<!--        notificationHistory.forEach(notification => {-->
+<!--            console.log("Adding notification to table:", notification);  // Логируем добавление данных в таблицу-->
+
+<!--            const row = tableBody.insertRow();-->
+<!--            const cell1 = row.insertCell(0);-->
+
+<!--            cell1.textContent = notification;  // Добавляем только текст уведомления-->
+<!--        });-->
+<!--    }-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--    <title>WebSocket Notifications</title>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>-->
+<!--    <style>-->
+<!--        body {-->
+<!--            font-family: Arial, sans-serif;-->
+<!--            margin: 18px;-->
+<!--        }-->
+<!--        #notifications {-->
+<!--            position: fixed;-->
+<!--            top: 10px;-->
+<!--            right: 10px;-->
+<!--            width: 300px;-->
+<!--        }-->
+<!--        .notification {-->
+<!--            border: 1px solid #333;-->
+<!--            border-radius: 8px;-->
+<!--            padding: 10px;-->
+<!--            margin-bottom: 10px;-->
+<!--            background-color: #f1f1f1;-->
+<!--            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);-->
+<!--        }-->
+<!--    </style>-->
+<!--</head>-->
+<!--<body>-->
+<!--<h1>Уведомления о заказах</h1>-->
+<!--<div id="notifications"></div>-->
+
+<!--<script>-->
+<!--    const socket = new SockJS('http://localhost:8000/ws');-->
+<!--    const stompClient = Stomp.over(socket);-->
+
+<!--    stompClient.connect({}, function(frame) {-->
+<!--        console.log('Connected: ' + frame);-->
+
+<!--        stompClient.subscribe('/topic/notifications', function(notification) {-->
+<!--            const notificationsDiv = document.getElementById('notifications');-->
+<!--            const notificationElement = document.createElement('div');-->
+<!--            notificationElement.classList.add('notification');-->
+<!--            notificationElement.textContent = notification.body;-->
+<!--            notificationsDiv.appendChild(notificationElement);-->
+
+<!--            // Удаление уведомления через 10 секунд-->
+<!--            setTimeout(() => {-->
+<!--                notificationsDiv.removeChild(notificationElement);-->
+<!--            }, 10000);-->
+<!--        });-->
+<!--    });-->
+<!--</script>-->
+<!--</body>-->
+<!--</html>-->

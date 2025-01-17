@@ -1,0 +1,63 @@
+type ClientDto {
+    uuid: String
+    name: String
+    email: String
+    phoneNumber: String
+    orders: [String]
+    isDelete: Boolean
+    createDate:String
+    updateDate:String
+}
+
+type BrigadeDto {
+    uuid: String
+    phoneNumber: String
+    freeness: Boolean
+    orders: String
+    workers: [String]
+    createDate:String
+    updateDate:String
+}
+type OrderDto{
+    uuid: String
+    cleaningType: CleaningType
+    executionStatus: ExecutionStatus
+    execution: String
+    orderNumber: String
+    distanceFromCenter: DistanceFromCenter
+    additionalServices: [AdditionalService]
+    customerComment: String
+    executorComment: String
+    redFlag: RedFlag
+    cost: Float
+    archived: Boolean
+    spaces: [SpaceDto]
+    client: String
+    brigade: String
+    createDate:String
+    updateDate:String
+
+}
+
+type WorkerDto{
+    uuid: String
+    name: String
+    phoneNumber: String
+    isOnShift: Boolean
+    brigade: String
+    dismissed: Boolean
+    createDate:String
+    updateDate:String
+}
+
+type SpaceDto {
+    spaceType: SpaceType
+    numbersOfRums: Int
+    area: Float
+}
+
+input SpaceInput {
+    paceType: SpaceType
+    numbersOfRums: Int
+    area: Float
+}

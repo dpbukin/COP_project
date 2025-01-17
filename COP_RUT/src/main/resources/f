@@ -1,0 +1,525 @@
+У меня есть настроенный WebSocket и index.html в моем проекте.
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        // Настройка брокера сообщений
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Регистрация эндпоинтов WebSocket
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS(); // Поддержка SockJS
+    }
+}
+
+@RestController
+@RequestMapping("/api/notifications")
+public class NotificationController {
+
+    private final NotificationService notificationService;
+
+    @Autowired
+    public NotificationController(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
+    @PostMapping
+    public ResponseEntity<String> sendNotification(@RequestBody String message) {
+        notificationService.sendNotification(message);
+        return ResponseEntity.ok("Notification sent: " + message);
+    }
+}
+
+@Controller
+public class WebPageController {
+
+    @GetMapping("/")
+    public String index() {
+        // Отображаем страницу index.html из папки static
+        return "index";
+    }
+}
+
+
+@Service
+public class NotificationService {
+
+    private final SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    public NotificationService(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
+    public void sendNotification(String message) {
+        // Отправляем уведомление всем клиентам, подписанным на '/topic/notifications'
+        messagingTemplate.convertAndSend("/topic/notifications", message);
+    }
+}
+
+
+Мне нужно использовать мой WebSocket на уровне сервисов для отправки уведомлений. А так-же сделай более красивый визуал,
+необходимо использовать методы моих контроддеров (не обязательно все) и как-то добавить к этому красоты в выводе информации по запросу и все остальное
+
+Вот мои сервисы и контроллеры.
+
+@RestController
+@RequestMapping("/api/client")
+@Tag(name = "Клиент")
+public class ClientController {
+    private ClientService clientService;
+    @PostMapping("/add")
+    public ResponseEntity<HelperHateoas> createClient(@RequestBody ClientDto clientDto) {
+        ClientDto clientDto1 = clientService.add(clientDto);
+
+        HelperHateoas helperHateoas = new HelperHateoas(clientDto);
+        helperHateoas.add(linkTo(methodOn(ClientController.class).updateClient(clientDto)).withRel("update"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).deleteClientById(clientDto1.getUuid())).withRel("deleteById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getClientById(clientDto1.getUuid())).withRel("getById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).findClientsByPhoneNumber(clientDto1.getPhoneNumber())).withRel("findByPhoneNumber"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getAllClients()).withRel("getAllClients"));
+
+        helperHateoas.addAction("update", "/api/client/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/client/get/" + clientDto.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/client/all", "GET");
+        helperHateoas.addAction("getByNumber", "/api/client/phone/" + clientDto.getPhoneNumber(), "GET");
+        helperHateoas.addAction("create", "/api/client/add", "POST");
+//        helperHateoas.addAction("delete", "/api/client/del/" + clientDto.getUuid(), "DELETE");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/get/{uuid}")
+    public ResponseEntity<HelperHateoas> getClientById(@PathVariable("uuid") String uuid) {
+        ClientDto clientDto = clientService.getClientByUuid(uuid);
+
+        if(clientDto == null){
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        HelperHateoas helperHateoas = new HelperHateoas(clientDto);
+        helperHateoas.add(linkTo(methodOn(ClientController.class).updateClient(clientDto)).withRel("update"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).deleteClientById(clientDto.getUuid())).withRel("deleteById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).createClient(null)).withRel("create"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).findClientsByPhoneNumber(clientDto.getPhoneNumber())).withRel("findByPhoneNumber"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getAllClients()).withRel("getAllClients"));
+
+        helperHateoas.addAction("update", "/api/client/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/client/get/" + clientDto.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/client/all", "GET");
+        helperHateoas.addAction("getByNumber", "/api/client/phone/" + clientDto.getPhoneNumber(), "GET");
+        helperHateoas.addAction("create", "/api/client/add", "POST");
+//        helperHateoas.addAction("delete", "/api/client/del/" + clientDto.getUuid(), "DELETE");
+
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<HelperHateoas> getAllClients() {
+        List<ClientDto> clients = clientService.getAllClients();
+
+        HelperHateoas helperHateoas = new HelperHateoas(clients);
+        helperHateoas.add(linkTo(methodOn(ClientController.class).updateClient(null)).withRel("update"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getClientById("uuid")).withRel("getById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).deleteClientById("uuid")).withRel("deleteById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).createClient(null)).withRel("create"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).findClientsByPhoneNumber("phoneNumber")).withRel("findByPhoneNumber"));
+
+        helperHateoas.addAction("update", "/api/client/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/client/get/", "GET");
+        helperHateoas.addAction("all", "/api/client/all", "GET");
+        helperHateoas.addAction("getByNumber", "/api/client/phone/", "GET");
+        helperHateoas.addAction("create", "/api/client/add", "POST");
+//        helperHateoas.addAction("delete", "http://localhost:8000/api/client/del/", "DELETE");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/phone/{phoneNumber}")
+    public ResponseEntity<HelperHateoas> findClientsByPhoneNumber(@PathVariable String phoneNumber) {
+        ClientDto clientDto = clientService.findClientsByPhoneNumber(phoneNumber);
+
+        if (clientDto == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        HelperHateoas helperHateoas = new HelperHateoas(clientDto);
+        helperHateoas.add(linkTo(methodOn(ClientController.class).updateClient(clientDto)).withRel("update"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getClientById(clientDto.getUuid())).withRel("getById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).deleteClientById(clientDto.getUuid())).withRel("deleteById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).createClient(clientDto)).withRel("create"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getAllClients()).withRel("getAllClients"));
+
+        helperHateoas.addAction("update", "/api/client/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/client/get/" + clientDto.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/client/all", "GET");
+        helperHateoas.addAction("getByNumber", "/api/client/phone/" + clientDto.getPhoneNumber(), "GET");
+        helperHateoas.addAction("create", "/api/client/add", "POST");
+//        helperHateoas.addAction("delete", "http://localhost:8000/api/client/del/" + clientDto.getUuid(), "DELETE");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @PutMapping("/update")
+    public ResponseEntity<HelperHateoas> updateClient(@RequestBody ClientDto clientDto) {
+        clientService.updateClient(clientDto);
+
+        ClientDto clientDtoResp = clientService.getClientByUuid(clientDto.getUuid());
+
+        HelperHateoas helperHateoas = new HelperHateoas(clientDtoResp);
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getClientById(clientDtoResp.getUuid())).withRel("getById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).deleteClientById(clientDtoResp.getUuid())).withRel("deleteById"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).createClient(null)).withRel("create"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).getAllClients()).withRel("getAllClients"));
+        helperHateoas.add(linkTo(methodOn(ClientController.class).findClientsByPhoneNumber(clientDtoResp.getPhoneNumber())).withRel("findByPhoneNumber"));
+
+        helperHateoas.addAction("update", "/api/client/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/client/get/" + clientDto.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/client/all", "GET");
+        helperHateoas.addAction("getByNumber", "/api/client/phone/" + clientDto.getPhoneNumber(), "GET");
+        helperHateoas.addAction("create", "/api/client/add", "POST");
+//        helperHateoas.addAction("delete", "http://localhost:8000/api/client/del/" + clientDto.getUuid(), "DELETE");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+
+    @DeleteMapping("/del/{uuid}")
+    public ResponseEntity<HelperHateoas> deleteClientById(@PathVariable String uuid) {
+        clientService.deleteClient(uuid);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+
+@RestController
+@RequestMapping("/api/order")
+@Tag(name = "Заказ")
+public class OrderController {
+    private OrderService orderService;
+
+    @PostMapping("/add")
+    public ResponseEntity<HelperHateoas> createOrder(@RequestBody OrderDto orderDto) {
+        OrderDto orderDto1 = orderService.add(orderDto);
+
+        HelperHateoas helperHateoas = new HelperHateoas(orderDto1);
+        helperHateoas.add(linkTo(methodOn(OrderController.class).getOrderById(null)).withRel("getOrderById"));
+        helperHateoas.add(linkTo(methodOn(OrderController.class).getAllOrders()).withRel("getAllOrders"));
+        helperHateoas.add(linkTo(methodOn(OrderController.class).getOrdersByClientId(null)).withRel("getOrdersByClientId"));
+        helperHateoas.add(linkTo(methodOn(OrderController.class).getOrdersByExecutionDate(orderDto1.getExecution())).withRel("getOrdersByExecutionDate"));
+        helperHateoas.add(linkTo(methodOn(OrderController.class).updateOrder(null)).withRel("updateOrder"));
+
+        helperHateoas.addAction("update", "/api/order/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/order/get" + orderDto1.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/order/all", "GET");
+        helperHateoas.addAction("client", "/api/order/client" + orderDto1.getClient(), "GET");
+        helperHateoas.addAction("create", "/api/order/add", "POST");
+        helperHateoas.addAction("execution", "/api/order/execution" + orderDto1.getExecution(), "GET");
+        helperHateoas.addAction("pagination", "/api/order/pagination", "GET");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/get")
+    public ResponseEntity<HelperHateoas> getOrderById(@RequestParam String uuid) {
+        OrderDto orderDto = orderService.getOrderByUuid(uuid);
+
+        ...
+
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<HelperHateoas> getAllOrders() {
+        List<OrderDto> orders = orderService.getAllOrders();
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/client")
+    public ResponseEntity<HelperHateoas> getOrdersByClientId(@RequestParam String clientId) {
+        List<OrderDto> orders = orderService.getOrdersByClientUuid(clientId);
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/execution")
+    public ResponseEntity<HelperHateoas> getOrdersByExecutionDate(@RequestParam LocalDateTime executionDate) {
+        List<OrderDto> orders = orderService.getOrdersByExecutionDate(LocalDate.from(executionDate).atStartOfDay());
+
+        ...
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @PutMapping
+    public ResponseEntity<HelperHateoas> updateOrder(@RequestBody OrderDto orderDto) {
+        OrderDto orderDto1 = orderService.updateOrder(orderDto);
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/archived/{id}")
+    public ResponseEntity<Void> deleteOrderById(@PathVariable String uuid) {
+        orderService.ArchivedOrder(uuid);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Autowired
+    public void setOrderService(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+}
+
+
+@RestController
+@RequestMapping("/api/worker")
+@Tag(name = "Работник")
+public class WorkerController {
+    private WorkerService workerService;
+
+    @PostMapping("/add")
+    public ResponseEntity<HelperHateoas> createWorker(@RequestBody WorkerDto workerDto) {
+        WorkerDto workerDto1 = workerService.add(workerDto);
+
+        HelperHateoas helperHateoas = new HelperHateoas(workerDto1);
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).getWorkerById(workerDto1.getUuid())).withRel("getWorkerById"));
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).getAllWorkers()).withRel("getAllWorkers"));
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).getWorkersByBrigade(workerDto1.getBrigade())).withRel("getWorkersByBrigade"));
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).getWorkersOnShift()).withRel("getWorkersOnShift"));
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).updateWorker(null)).withRel("updateWorker"));
+        helperHateoas.add(linkTo(methodOn(WorkerController.class).deleteWorkerById(workerDto1.getUuid())).withRel("deleteWorkerById"));
+
+        helperHateoas.addAction("update", "/api/worker/update", "PUT", "application/json");
+        helperHateoas.addAction("get", "/api/worker/get/" + workerDto1.getUuid(), "GET");
+        helperHateoas.addAction("all", "/api/worker/all", "GET");
+        helperHateoas.addAction("brigade", "/api/worker/brigade/" + workerDto1.getBrigade(), "GET");
+        helperHateoas.addAction("create", "/api/worker/add", "POST");
+        helperHateoas.addAction("shift", "/api/worker/shift", "GET");
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/get/{uuid}")
+    public ResponseEntity<HelperHateoas> getWorkerById(@PathVariable String uuid) {
+        WorkerDto workerDto1 = workerService.getWorkerByUuid(uuid);
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<HelperHateoas> getAllWorkers() {
+        List<WorkerDto> workers = workerService.getAllWorkers();
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/brigade/{brigadeId}")
+    public ResponseEntity<HelperHateoas> getWorkersByBrigade(@PathVariable String brigadeId) {
+        List<WorkerDto> workers = workerService.getWorkersByBrigade(brigadeId);
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @GetMapping("/shift")
+    public ResponseEntity<HelperHateoas> getWorkersOnShift() {
+        List<WorkerDto> workers = workerService.getWorkersOnShift();
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @PutMapping("/update")
+    public ResponseEntity<HelperHateoas> updateWorker(@RequestBody WorkerDto workerDto) {
+        WorkerDto workerDto1 = workerService.updateWorker(workerDto);
+
+        ...
+
+        return new ResponseEntity<>(helperHateoas, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/dismissed/{uuid}")
+    public ResponseEntity<Void> deleteWorkerById(@PathVariable String uuid) {
+        workerService.dismissedWorkerByUuid(uuid);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Autowired
+    public void setWorkerService(WorkerService workerService) {
+        this.workerService = workerService;
+    }
+
+}
+
+
+@Service
+public class ClientServiceImpl implements ClientService {
+
+    private final RabbitTemplate rabbitTemplate;
+    private ClientRepository clientRepository;
+    private ModelMapper modelMapper;
+
+    public ClientServiceImpl(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
+    @Override
+    public void save(Client client) {
+        clientRepository.save(client);
+
+        EventLogDto log = new EventLogDto(
+                client.getUuid().toString(),
+                "SAVE",
+                LocalDateTime.now(),
+                "Client saved: " + client.toString()
+        );
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+    }
+
+    @Override
+    public ClientDto add(ClientDto clientDto) {
+        Client client = modelMapper.map(clientDto, Client.class);
+        client.setUuid(String.valueOf(UUID.randomUUID()));
+        clientRepository.save(client);
+        client.setCreateDate(LocalDateTime.now());
+        client.setUpdateDate(LocalDateTime.now());
+
+        EventLogDto log = new EventLogDto(
+                client.getUuid().toString(),
+                "CREATE",
+                LocalDateTime.now(),
+                "Client created: " + client.toString()
+        );
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+        return clientDto;
+    }
+
+    @Override
+    public ClientDto getClientByUuid(String uuid) {
+        return modelMapper.map(clientRepository.findClientByUuid(uuid).orElse(null), ClientDto.class);
+    }
+
+    @Override
+    public List<ClientDto> getAllClients() {
+        return clientRepository.findAll().stream()
+                .map(client -> modelMapper.map(client, ClientDto.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ClientDto findClientsByPhoneNumber(String phoneNumber) {
+        return modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class) == null ? null : modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class);
+//        return Optional.ofNullable(modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class));
+    }
+
+    @Override
+    public Optional<ClientDto> findClientsByEmail(String email) {
+        return Optional.ofNullable(modelMapper.map(clientRepository.findByEmail(email), ClientDto.class));
+    }
+
+    @Override
+    public ClientDto updateClient(ClientDto clientDto) {
+        Client client = modelMapper.map(clientRepository.findClientByUuid(clientDto.getUuid()).orElseThrow(), Client.class);
+
+        if(clientDto.getName() != null){
+            client.setName(clientDto.getName());
+        }
+        if(clientDto.getPhoneNumber() != null){
+            client.setPhoneNumber(clientDto.getPhoneNumber());
+        }
+        if(clientDto.getEmail() != null){
+            client.setEmail(clientDto.getEmail());
+        }
+        if(clientDto.getOrders() != null){
+            client.setOrders(clientDto.getOrders());
+        }
+
+        client.setUpdateDate(LocalDateTime.now());
+        clientRepository.save(client);
+
+        EventLogDto log = new EventLogDto(
+                client.getUuid().toString(),
+                "UPDATE",
+                LocalDateTime.now(),
+                "Client updated: " + client.toString()
+        );
+
+        System.out.println(log);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+
+        return clientDto;
+    }
+
+    @Override
+    public void addOrderInClient(String clientId, String orderId) {
+        Client client = clientRepository.findClientByUuid(clientId).orElseThrow();
+        List<String> orders = client.getOrders();
+        orders.add(orderId);
+        client.setOrders(orders);
+        clientRepository.save(client);
+
+        EventLogDto log = new EventLogDto(
+                client.getUuid().toString(),
+                "UPDATE",
+                LocalDateTime.now(),
+                "Client updated: " + client.toString()
+        );
+
+        System.out.println(log);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+    }
+
+    @Override
+    public void deleteClient(String uuid) {
+        Client client = clientRepository.findClientByUuid(uuid).orElseThrow();
+        client.setDelete(true);
+        clientRepository.save(client);
+
+        EventLogDto log = new EventLogDto(
+                client.getId().toString(),
+                "DELETE",
+                LocalDateTime.now(),
+                "Client deleted: " + client.toString()
+        );
+        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+    }
+
+    @Autowired
+    public void setClientRepository(ClientRepository clientRepository) {
+        this.clientRepository = clientRepository;
+    }
+
+    @Autowired
+    public void setModelMapper(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
+}
+
