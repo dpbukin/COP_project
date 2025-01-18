@@ -28,14 +28,24 @@ public class ExceptionHandlers {
         var status = HttpStatus.NOT_FOUND;
         return ResponseEntity.status(status).body(new StatusResponse(ERROR_STATUS, e.getMessage()));
     }
-    @ExceptionHandler(InternalServerErrorException.class)
-    public ResponseEntity<StatusResponse> handleInternalServerErrorException(InternalServerErrorException e) {
-        var status = HttpStatus.INTERNAL_SERVER_ERROR;
-        return ResponseEntity.status(status).body(new StatusResponse(ERROR_STATUS, e.getMessage()));
-    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StatusResponse> handleGenericException(Exception e) {
         var status = HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(status).body(new StatusResponse(ERROR_STATUS, "An unexpected error occurred: " + e.getMessage()));
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<String> handleServiceUnavailableException(ServiceUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(InternalServerErrorException.class)
+    public ResponseEntity<String> handleInternalServerErrorException(InternalServerErrorException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + ex.getMessage());
     }
 }

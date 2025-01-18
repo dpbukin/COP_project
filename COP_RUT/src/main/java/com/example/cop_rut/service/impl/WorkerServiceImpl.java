@@ -6,6 +6,7 @@ import com.example.cop_rut.dtos.base.WorkerDto;
 import com.example.cop_rut.model.Worker;
 import com.example.cop_rut.repositories.WorkerRepository;
 import com.example.cop_rut.service.WorkerService;
+import com.example.cop_rut.service.impl.web_socket.MessageSenderService;
 import org.modelmapper.ModelMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,8 @@ public class WorkerServiceImpl implements WorkerService {
     private final RabbitTemplate rabbitTemplate;
     private WorkerRepository workerRepository;
     private ModelMapper modelMapper;
-    private NotificationService notificationService;
+
+    private MessageSenderService messageSenderService;
 
     @Autowired
     public WorkerServiceImpl(RabbitTemplate rabbitTemplate) {
@@ -39,7 +41,7 @@ public class WorkerServiceImpl implements WorkerService {
                 "Worker saved: " + worker.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
     }
     @Override
@@ -58,7 +60,7 @@ public class WorkerServiceImpl implements WorkerService {
                 "Worker created: " + worker.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
         return workerDto;
     }
@@ -116,7 +118,7 @@ public class WorkerServiceImpl implements WorkerService {
                 "Worker updated: " + worker.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
         return modelMapper.map(worker, WorkerDto.class);
     }
@@ -134,7 +136,7 @@ public class WorkerServiceImpl implements WorkerService {
                 "Worker status updated: " + worker.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
     }
 
     @Override
@@ -152,7 +154,7 @@ public class WorkerServiceImpl implements WorkerService {
                 "Worker dismissed: " + worker.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
         workerRepository.save(worker);
 
@@ -164,13 +166,12 @@ public class WorkerServiceImpl implements WorkerService {
     }
 
     @Autowired
-
     public void setModelMapper(ModelMapper modelMapper) {
         this.modelMapper = modelMapper;
     }
 
     @Autowired
-    public void setNotificationService(NotificationService notificationService) {
-        this.notificationService = notificationService;
+    public void setMessageSenderService(MessageSenderService messageSenderService) {
+        this.messageSenderService = messageSenderService;
     }
 }

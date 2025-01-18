@@ -1,6 +1,5 @@
 package com.example.cop_rut.service.impl;
 
-import com.example.cop_rut.config.RabbitMQConfig;
 import com.example.cop_rut.dtos.EventLogDto;
 import com.example.cop_rut.dtos.base.OrderDto;
 import com.example.cop_rut.dtos.base.SpaceDto;
@@ -10,8 +9,8 @@ import com.example.cop_rut.model.enam.order.ExecutionStatus;
 import com.example.cop_rut.repositories.OrderRepository;
 import com.example.cop_rut.service.BrigadeService;
 import com.example.cop_rut.service.OrderService;
+import com.example.cop_rut.service.impl.web_socket.MessageSenderService;
 import org.modelmapper.ModelMapper;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -30,10 +29,9 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
     private OrderRepository orderRepository;
     private BrigadeService brigadeService;
-    private RabbitTemplate rabbitTemplate;
     private ModelMapper modelMapper;
-    private MongoTemplate mongoTemplate;
-    private NotificationService notificationService;
+    private MessageSenderService messageSenderService;
+
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
     @Override
@@ -46,7 +44,8 @@ public class OrderServiceImpl implements OrderService {
                 LocalDateTime.now(),
                 "Заказ сохранен: " + order.toString()
         );
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+
+        messageSenderService.sendLogMessage(log);
 
     }
 
@@ -70,7 +69,7 @@ public class OrderServiceImpl implements OrderService {
                     LocalDateTime.now(),
                     "Order exeption: " + "Не удалось получить свободную бригаду для заказа с UUID: \"uuid"
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
             System.out.println("Не удалось получить свободную бригаду для заказа с UUID: " + uuid);
         }
@@ -87,15 +86,14 @@ public class OrderServiceImpl implements OrderService {
                 LocalDateTime.now(),
                 "Заказ создан: " + order.toString()
         );
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
         String notificationMessage = String.format(
                 "Заказ с UUID %s был создан, дата: %s, статус: %s",
                 order.getUuid(), order.getCreateDate().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")), order.getExecutionStatus());
-        notificationService.sendNotification(notificationMessage);
 
+        messageSenderService.sendNotificationMessage(notificationMessage);
 
-        notificationService.sendNotification(notificationMessage);
 
         if (freeBrigade == null) {
             scheduleRetryForAssigningBrigade(order);
@@ -118,7 +116,8 @@ public class OrderServiceImpl implements OrderService {
                             LocalDateTime.now(),
                             "Order update: " + "Бригада была успешно назначена заказу с UUID: " + order.getUuid()
                     );
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+                    messageSenderService.sendLogMessage(log);
+
 
                     System.out.println("Бригада была успешно назначена заказу с UUID: " + order.getUuid());
                 } else {
@@ -129,8 +128,8 @@ public class OrderServiceImpl implements OrderService {
                             LocalDateTime.now(),
                             "Order exeption: " + "Не удалось получить свободную бригаду для заказа с UUID: " + order.getUuid()
                     );
+                    messageSenderService.sendLogMessage(log);
 
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
                     System.out.println("Не удалось назначить бригаду заказу с UUID: " + order.getUuid() + ", попробуем снова позже");
 
                     scheduleRetryForAssigningBrigade(order);
@@ -142,7 +141,7 @@ public class OrderServiceImpl implements OrderService {
                         LocalDateTime.now(),
                         "Order exeption: " + "Ошибка при повторной попытке назначения бригады для заказа с UUID: " + order.getUuid() + " " + e
                 );
-                rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+                messageSenderService.sendLogMessage(log);
 
                 System.out.println("Ошибка при повторной попытке назначения бригады для заказа с UUID: " + order.getUuid() + " " + e);
             }
@@ -238,12 +237,12 @@ public class OrderServiceImpl implements OrderService {
                 "Заказ обновлен: " + order.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
         String notificationMessage = String.format(
                 "Заказ с UUID %s был обновлен, дата: %s, статус: %s",
                 order.getUuid(), order.getCreateDate(), order.getExecutionStatus());
-        notificationService.sendNotification(notificationMessage);
+        messageSenderService.sendNotificationMessage(notificationMessage);
 
         return orderDto;
     }
@@ -273,6 +272,7 @@ public class OrderServiceImpl implements OrderService {
                 LocalDateTime.now(),
                 "Статус заказа был изменен: " + order.toString()
         );
+        messageSenderService.sendLogMessage(log);
 
         String notificationMessage = String.format(
                 "Заказ с UUID %s обновлен, дата: %s, статус: %s",
@@ -281,9 +281,8 @@ public class OrderServiceImpl implements OrderService {
                         format(DateTimeFormatter.ofPattern("dd.MM.yyyy hh:mm")),
                 order.getExecutionStatus());
 
-        notificationService.sendNotification(notificationMessage);
+        messageSenderService.sendNotificationMessage(notificationMessage);
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
     }
 
     @Override
@@ -301,7 +300,7 @@ public class OrderServiceImpl implements OrderService {
                 "Помещения в заказе обновлены: " + order.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
     }
 
     @Override
@@ -324,9 +323,9 @@ public class OrderServiceImpl implements OrderService {
                         format(DateTimeFormatter.ofPattern("dd.MM.yyyy hh:mm")),
                 order.getExecutionStatus());
 
-        notificationService.sendNotification(notificationMessage);
+        messageSenderService.sendNotificationMessage(notificationMessage);
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
     }
 
@@ -343,22 +342,9 @@ public class OrderServiceImpl implements OrderService {
                 "Заказ стал активным: " + order.toString()
         );
 
-        String notificationMessage = String.format(
-                "Заказ с UUID %s активен, дата: %s, статус: %s",
-                order.getUuid(),
-                LocalDateTime.now().
-                        format(DateTimeFormatter.ofPattern("dd.MM.yyyy hh:mm")),
-                order.getExecutionStatus());
-
-        notificationService.sendNotification(notificationMessage);
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
     }
 
-    @Autowired
-    public void setMongoTemplate(MongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
-    }
     @Autowired
     public void setOrderRepository(OrderRepository orderRepository) {
         this.orderRepository = orderRepository;
@@ -372,11 +358,7 @@ public class OrderServiceImpl implements OrderService {
         this.brigadeService = brigadeService;
     }
     @Autowired
-    public void setNotificationService(NotificationService notificationService) {
-        this.notificationService = notificationService;
-    }
-    @Autowired
-    public void setRabbitTemplate(RabbitTemplate rabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
+    public void setMessageSenderService(MessageSenderService messageSenderService) {
+        this.messageSenderService = messageSenderService;
     }
 }

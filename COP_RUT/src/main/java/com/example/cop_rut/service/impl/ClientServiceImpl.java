@@ -6,6 +6,7 @@ import com.example.cop_rut.dtos.base.ClientDto;
 import com.example.cop_rut.model.Client;
 import com.example.cop_rut.repositories.ClientRepository;
 import com.example.cop_rut.service.ClientService;
+import com.example.cop_rut.service.impl.web_socket.MessageSenderService;
 import org.modelmapper.ModelMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,15 +22,9 @@ import java.util.stream.Collectors;
 @Service
 public class ClientServiceImpl implements ClientService {
 
-    private final RabbitTemplate rabbitTemplate;
     private ClientRepository clientRepository;
     private ModelMapper modelMapper;
-    private NotificationService notificationService;
-
-    @Autowired
-    public ClientServiceImpl(RabbitTemplate rabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
-    }
+    private MessageSenderService messageSenderService;
 
     @Override
     public void save(Client client) {
@@ -42,8 +37,7 @@ public class ClientServiceImpl implements ClientService {
                 "Client saved: " + client.toString()
         );
 
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
-
+        messageSenderService.sendLogMessage(log);
     }
 
     @Override
@@ -60,8 +54,7 @@ public class ClientServiceImpl implements ClientService {
                 LocalDateTime.now(),
                 "Client created: " + client.toString()
         );
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
 
         String notificationMessage = String.format(
@@ -69,7 +62,7 @@ public class ClientServiceImpl implements ClientService {
                 client.getUuid(),
                 client.getCreateDate().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
         );
-        notificationService.sendNotification(notificationMessage);
+        messageSenderService.sendNotificationMessage(notificationMessage);
 
         return clientDto;
     }
@@ -81,6 +74,10 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public List<ClientDto> getAllClients() {
+
+        String notificationMessage = "Сработала ручка получения всех клиентов";
+        messageSenderService.sendNotificationMessage(notificationMessage);
+
         return clientRepository.findAll().stream()
                 .map(client -> modelMapper.map(client, ClientDto.class))
                 .collect(Collectors.toList());
@@ -88,8 +85,8 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public ClientDto findClientsByPhoneNumber(String phoneNumber) {
-        return modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class) == null ? null : modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class);
-//        return Optional.ofNullable(modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class));
+        return modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class) == null ? null
+                : modelMapper.map(clientRepository.findByPhoneNumber(phoneNumber), ClientDto.class);
     }
 
     @Override
@@ -119,8 +116,7 @@ public class ClientServiceImpl implements ClientService {
                 "Client updated: " + client.toString()
         );
 
-        System.out.println(log);
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
 
         return clientDto;
@@ -141,8 +137,7 @@ public class ClientServiceImpl implements ClientService {
                 "Client updated: " + client.toString()
         );
 
-        System.out.println(log);
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
     }
 
@@ -158,7 +153,7 @@ public class ClientServiceImpl implements ClientService {
                 LocalDateTime.now(),
                 "Client deleted: " + client.toString()
         );
-        rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+        messageSenderService.sendLogMessage(log);
 
     }
 
@@ -171,9 +166,8 @@ public class ClientServiceImpl implements ClientService {
     public void setModelMapper(ModelMapper modelMapper) {
         this.modelMapper = modelMapper;
     }
-
     @Autowired
-    public void setNotificationService(NotificationService notificationService) {
-        this.notificationService = notificationService;
+    public void setMessageSenderService(MessageSenderService messageSenderService) {
+        this.messageSenderService = messageSenderService;
     }
 }

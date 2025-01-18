@@ -5,6 +5,8 @@ import com.example.cop_rut.service.BrigadeService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,8 +48,9 @@ public class BrigadeController {
     }
 
     @GetMapping("/get/{uuid}")
-    public ResponseEntity<HelperHateoas> getBrigadeById(@PathVariable String uuid) {
+    public ResponseEntity<?> getBrigadeById(@PathVariable String uuid) {
         BrigadeDto brigadeDto = brigadeService.getBrigadeByUuid(uuid);
+
 
         HelperHateoas helperHateoas = new HelperHateoas(brigadeDto);
         helperHateoas.add(linkTo(methodOn(BrigadeController.class).createBrigade(null)).withRel("createBrigade"));

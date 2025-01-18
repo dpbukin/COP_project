@@ -1,28 +1,28 @@
 package com.example.cop_rut.service.impl;
 
-import com.example.cop_rut.config.RabbitMQConfig;
 import com.example.cop_rut.dtos.EventLogDto;
 import com.example.cop_rut.dtos.base.BrigadeDto;
 import com.example.cop_rut.service.BrigadeService;
+import com.example.cop_rut.service.impl.web_socket.MessageSenderService;
 import cop_grpc.Brigade.*;
 import cop_grpc.BrigadeServiceGrpc;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import net.devh.boot.grpc.client.inject.GrpcClient;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.example.cop_rut.exception.*;
 
-import com.example.cop_rut_contracts.exception.InternalServerErrorException;
 @Service
 public class BrigadeServiceImpl implements BrigadeService {
 
     @GrpcClient("cop_rut")
     private BrigadeServiceGrpc.BrigadeServiceBlockingStub brigadeServiceStub;
-    private RabbitTemplate rabbitTemplate;
+    private MessageSenderService messageSenderService;
+
 
     @Override
     public BrigadeDto add(BrigadeDto brigadeDto) {
@@ -40,7 +40,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade created: " + brigadeDto.toString()
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
             brigadeDto.setUuid(response.getUuid());
             return brigadeDto;
@@ -66,7 +66,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade fetched: " + response.getMessage()
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
             BrigadeDto brigadeDto = new BrigadeDto();
             brigadeDto.setUuid(brigadeId);
@@ -90,7 +90,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "All brigades fetched"
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);;
 
             return response.getBrigadesList().stream()
                     .map(brigadeResponse -> {
@@ -125,7 +125,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade " + brigadeUuid + " freed"
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
             return response.getMessage();
 
@@ -152,7 +152,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade updated: " + brigadeDto.toString()
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
             brigadeDto.setPhoneNumber(response.getPhoneNumber());
             brigadeDto.setWorkersId(response.getWorkersIdList());
@@ -180,7 +180,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade deleted: " + brigadeId
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
 
         } catch (StatusRuntimeException e) {
             handleGrpcError(e);
@@ -203,7 +203,7 @@ public class BrigadeServiceImpl implements BrigadeService {
                     LocalDateTime.now(),
                     "Brigade assigned to order: " + orderId
             );
-            rabbitTemplate.convertAndSend(RabbitMQConfig.LOG_EXCHANGE, RabbitMQConfig.ROUTING_KEY, log);
+            messageSenderService.sendLogMessage(log);
             return response.getUuid();
 
         } catch (StatusRuntimeException e) {
@@ -213,12 +213,17 @@ public class BrigadeServiceImpl implements BrigadeService {
     }
 
     private void handleGrpcError(StatusRuntimeException e) {
-        if (e.getStatus().getCode() == Status.Code.UNAVAILABLE || e.getStatus().getCode() == Status.Code.INTERNAL) {
-            throw new InternalServerErrorException("gRPC service is down or returned an error");
+        if (e.getStatus().getCode() == Status.Code.UNAVAILABLE) {
+            throw new ServiceUnavailableException("gRPC service is unavailable, please try again later");
+        } else if (e.getStatus().getCode() == Status.Code.INTERNAL) {
+            throw new InternalServerErrorException("An internal error occurred in the gRPC service");
+        } else {
+            throw new RuntimeException("Unhandled gRPC error: " + e.getStatus().getCode());
         }
     }
+
     @Autowired
-    public void setRabbitTemplate(RabbitTemplate rabbitTemplate) {
-        this.rabbitTemplate = rabbitTemplate;
+    public void setMessageSenderService(MessageSenderService messageSenderService) {
+        this.messageSenderService = messageSenderService;
     }
 }
